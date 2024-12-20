@@ -1,5 +1,2 @@
-streamlit
-pandas 
-streamlit
-io
-numpy
+pandas==2.0.3
+streamlit==1.25.0
