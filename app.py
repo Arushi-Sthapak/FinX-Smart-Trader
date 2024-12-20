@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-from pyngrok import ngrok
 import io #for downloading feature
 
 
