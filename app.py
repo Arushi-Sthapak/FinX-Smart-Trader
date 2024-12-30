@@ -1,8 +1,84 @@
+import os
+import time
 import pandas as pd
 import streamlit as st
-import io #for downloading feature
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+USERNAME = os.getenv("SCRAPER_USERNAME", "default_username")
+PASSWORD = os.getenv("SCRAPER_PASSWORD", "default_password")
+CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "C:\\chromedriver-win64\\chromedriver.exe")
 
+def init_driver(download_dir):
+    options = Options()
+    prefs = {"download.default_directory": download_dir}
+    options.add_experimental_option("prefs", prefs)
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-gpu")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    )
+    driver = webdriver.Chrome(service=Service(CHROMEDRIVER_PATH), options=options)
+    return driver
+
+def download_file_from_screener_with_login(url, download_dir):
+    driver = init_driver(download_dir)
+    try:
+        driver.get("https://www.screener.in/login/")
+        wait = WebDriverWait(driver, 10)
+
+        # Input credentials
+        username_field = wait.until(lambda d: d.find_element(By.NAME, "username"))
+        username_field.send_keys(USERNAME)
+
+        password_field = driver.find_element(By.NAME, "password")
+        password_field.send_keys(PASSWORD)
+
+        login_button = driver.find_element(By.XPATH, "//button[@type='submit']")
+        login_button.click()
+        time.sleep(3)  # Allow login
+
+        # Navigate to the target URL
+        driver.get(url)
+        time.sleep(3)  # Allow page load
+
+        # Trigger file download
+        download_button = wait.until(
+            lambda d: d.find_element(By.XPATH, "//button[contains(@class, 'tooltip-left')]")
+        )
+        download_button.click()
+        time.sleep(5)  # Wait for download
+
+        # Return downloaded file path
+        downloaded_files = [f for f in os.listdir(download_dir) if f.endswith(".csv")]
+        if downloaded_files:
+            return os.path.join(download_dir, downloaded_files[0])
+        else:
+            raise FileNotFoundError("Failed to download the file.")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+        return None
+    finally:
+        driver.quit()
+
+# Streamlit App Configuration
+st.set_page_config(page_title="Financial Dashboard", layout="wide", page_icon="💹")
+st.title("Financial Analysis Dashboard")
+
+# Sidebar for Upload and Scraping
+st.sidebar.header("Upload or Scrape Data")
+uploaded_file = st.sidebar.file_uploader("Upload Stock Data (CSV)", type="csv")
+scraping_url = st.sidebar.text_input("Enter the Screener.in URL:", "https://www.screener.in/screens/2284718/all-stocks-download/")
 
 # Functions to calculate metrics
 def calculate_ev(row):
@@ -267,29 +343,38 @@ def display_financial_health_summary(df):
         st.markdown("<hr>", unsafe_allow_html=True)
 
 
-# # Function to display Valuation Summary
-# def display_summary(company_data):
-#     st.subheader(f"**Valuation Summary for {company_data['Name']}**")
-#     st.write("### Final Valuation Details:")
-#     st.table({
-#         "Current Price": [company_data['Current Price']],
-#         "Final Expected Price": [company_data['Final expected price']],
-#         "Gain (%)": [company_data['Gain%']],
-#         "Enterprise Value": [company_data['Enterprise Value']],
-#         "EV/EBITDA": [company_data['EV/EBITDA']],
-#         "Price per Share (EV/EBITDA)": [company_data['Price per Share (EV/EBITDA)']],
-#         "Price per Share (Revenue Method)": [company_data['Price per Share (Revenue Method)']],
+# Automate scraping if URL is provided
+if st.sidebar.button("Scrape Data"):
+    download_dir = os.getcwd()
+    with st.spinner("Scraping data..."):
+        downloaded_file = download_file_from_screener_with_login(scraping_url, download_dir)
+        if downloaded_file:
+            st.success("Data scraped successfully.")
+            with open(downloaded_file, "rb") as file:
+                st.download_button(
+                    label="Download Scraped File",
+                    data=file,
+                    file_name="scraped_data.csv",
+                    mime="text/csv",
+                )
+            uploaded_file = downloaded_file
 
+# # Process uploaded or scraped data
+# if uploaded_file:
+#     processed_data = process_financial_data(uploaded_file)
+#     if processed_data is not None:
+#         st.subheader("Top Companies by Gain%")
+#         top_companies = processed_data.sort_values(by="Gain%", ascending=False).head(10)
+#         st.dataframe(top_companies)
 
-#     })
+#         csv_data = processed_data.to_csv(index=False).encode("utf-8")
+#         st.download_button(
+#             label="Download Processed Data",
+#             data=csv_data,
+#             file_name="processed_data.csv",
+#             mime="text/csv",
+#         )
 
-# Streamlit App Configuration
-st.set_page_config(page_title="Financial Dashboard", layout="wide", page_icon="💹")
-st.title("Financial Analysis Dashboard")
-
-# Sidebar for Uploading Data
-st.sidebar.header("Upload Section")
-uploaded_file = st.sidebar.file_uploader("Upload Stock Data (CSV)", type="csv")
 
 # Main Application
 if uploaded_file:
