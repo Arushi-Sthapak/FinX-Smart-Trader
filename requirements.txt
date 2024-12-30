@@ -7,7 +7,8 @@ libnss3
 libasound2 
 libx11-xcb1 
 libxcomposite1 
-libxrandr2 libxcursor1 
+libxrandr2 
+libxcursor1 
 libxdamage1 
 libxfixes3 
 libxi6 
