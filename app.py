@@ -10,11 +10,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from dotenv import load_dotenv 
 
-# Install Chromium and Chromedriver
-os.system("apt-get update")
-os.system("apt-get install -y chromium-browser chromium-chromedriver")
-os.system("chmod +x /usr/bin/chromedriver")
-
 
 # Load environment variables
 load_dotenv()
@@ -36,9 +31,7 @@ def init_driver(download_dir):
     options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     )
-    # options.binary_location = '/usr/bin/chromium-browser'
-    # service = Service('/usr/bin/chromedriver')
-    service = Service(os.getcwd(), 'chromedriver')
+    service = Service(CHROMEDRIVER_PATH)
     service.command_line_args().append('--verbose')
     driver = webdriver.Chrome(service=service, options=options)
     return driver
