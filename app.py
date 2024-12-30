@@ -6,10 +6,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
-from dotenv import load_dotenv 
-
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
@@ -20,7 +18,6 @@ CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "chromedriver-win64\\chromedr
 def init_driver(download_dir):
     options = Options()
     prefs = {"download.default_directory": download_dir}
-    options.add_argument('--headless')  # Run in headless mode
     options.add_experimental_option("prefs", prefs)
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
@@ -31,9 +28,7 @@ def init_driver(download_dir):
     options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     )
-    service = Service(CHROMEDRIVER_PATH)
-    service.command_line_args().append('--verbose')
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=Service(CHROMEDRIVER_PATH), options=options)
     return driver
 
 def download_file_from_screener_with_login(url, download_dir):
