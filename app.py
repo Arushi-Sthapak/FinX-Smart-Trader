@@ -9,6 +9,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from dotenv import load_dotenv 
 
+# Install Chromium and Chromedriver
+os.system("apt-get update")
+os.system("apt-get install -y chromium-browser chromium-chromedriver")
+
 # Load environment variables
 load_dotenv()
 USERNAME = os.getenv("SCRAPER_USERNAME", "default_username")
@@ -29,7 +33,8 @@ def init_driver(download_dir):
     options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     )
-    service = Service(CHROMEDRIVER_PATH)
+    options.binary_location = '/usr/bin/chromium-browser'
+    service = Service('/usr/bin/chromedriver')
     service.command_line_args().append('--verbose')
     driver = webdriver.Chrome(service=service, options=options)
     return driver
