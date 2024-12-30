@@ -3,3 +3,4 @@ streamlit==1.25.0
 selenium==4.27.1
 python-dotenv==1.0.1
 webdriver-manager
+libnss3 libasound2 libx11-xcb1 libxcomposite1 libxrandr2 libxcursor1 libxdamage1 libxfixes3 libxi6 libxtst6 fonts-liberation libappindicator3-1 libatspi2.0-0 libcurl4
