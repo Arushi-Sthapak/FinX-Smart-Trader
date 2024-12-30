@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 # Install Chromium and Chromedriver
 os.system("apt-get update")
 os.system("apt-get install -y chromium-browser chromium-chromedriver")
+os.system("chmod +x .chromedriver-win64\\chromedriver.exe")
+
 
 # Load environment variables
 load_dotenv()
