@@ -29,7 +29,9 @@ def init_driver(download_dir):
     options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     )
-    driver = webdriver.Chrome(service=Service(CHROMEDRIVER_PATH), options=options)
+    service = Service(CHROMEDRIVER_PATH)
+    service.command_line_args().append('--verbose')
+    driver = webdriver.Chrome(service=service, options=options)
     return driver
 
 def download_file_from_screener_with_login(url, download_dir):
