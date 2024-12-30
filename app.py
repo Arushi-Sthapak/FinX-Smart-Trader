@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 USERNAME = os.getenv("SCRAPER_USERNAME", "default_username")
 PASSWORD = os.getenv("SCRAPER_PASSWORD", "default_password")
-CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "C:\\chromedriver-win64\\chromedriver.exe")
+CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "chromedriver-win64\\chromedriver.exe")
 
 def init_driver(download_dir):
     options = Options()
