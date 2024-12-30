@@ -38,7 +38,7 @@ def init_driver(download_dir):
     )
     # options.binary_location = '/usr/bin/chromium-browser'
     # service = Service('/usr/bin/chromedriver')
-    service = Service(ChromeDriverManager().install()
+    service = Service(ChromeDriverManager().install())
     service.command_line_args().append('--verbose')
     driver = webdriver.Chrome(service=service, options=options)
     return driver
