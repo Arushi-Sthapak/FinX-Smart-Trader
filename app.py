@@ -36,8 +36,9 @@ def init_driver(download_dir):
     options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     )
-    options.binary_location = '/usr/bin/chromium-browser'
-    service = Service('/usr/bin/chromedriver')
+    # options.binary_location = '/usr/bin/chromium-browser'
+    # service = Service('/usr/bin/chromedriver')
+    service = Service(ChromeDriverManager().install()
     service.command_line_args().append('--verbose')
     driver = webdriver.Chrome(service=service, options=options)
     return driver
