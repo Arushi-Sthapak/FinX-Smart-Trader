@@ -20,7 +20,7 @@ os.system("chmod +x /usr/bin/chromedriver")
 load_dotenv()
 USERNAME = os.getenv("SCRAPER_USERNAME", "default_username")
 PASSWORD = os.getenv("SCRAPER_PASSWORD", "default_password")
-CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "chromedriver-win64\\chromedriver.exe")
+# CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "chromedriver-win64\\chromedriver.exe")
 
 def init_driver(download_dir):
     options = Options()
@@ -40,7 +40,8 @@ def init_driver(download_dir):
     # service = Service('/usr/bin/chromedriver')
     service = Service(ChromeDriverManager().install())
     service.command_line_args().append('--verbose')
-    driver = webdriver.Chrome(service=service, options=options)
+    chromedriver_path = os.path.join(os.getcwd(), 'chromedriver')
+    driver = webdriver.Chrome(executable_path=chromedriver_path, options=options)
     return driver
 
 def download_file_from_screener_with_login(url, download_dir):
