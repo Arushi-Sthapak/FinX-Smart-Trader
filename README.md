@@ -14,8 +14,8 @@ The tool supports the following features:
 
 To run this project, ensure you have the following installed:  
 
-1. **Python 3.7+**  
-2. **Required Libraries**: All dependencies are listed in `requirements.txt`. Install them using:  
+ **Python 3.7+**  
+
 
 # How to Run the Project
 
