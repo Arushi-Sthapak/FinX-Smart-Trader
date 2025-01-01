@@ -38,6 +38,7 @@ Change to the project folder:
 
 ```bash
 cd Stock-Price-Valuation-Calculator
+```
 
 ### Step 3: Install Dependencies
 
@@ -45,6 +46,7 @@ Install the required Python libraries:
 
 ```bash
 pip install -r requirements.txt
+```
 
 ### Step 4: Run the Streamlit App
 
@@ -52,6 +54,7 @@ Launch the Streamlit application with the following command:
 
 ```bash
 python -m streamlit run app.py
+```
 
 ### Step 5: Access the App in Your Browser
 
