@@ -18,8 +18,6 @@ To run this project, ensure you have the following installed:
 
 # How to Run the Project
 
-## Installation and Setup
-
 Follow these steps to set up the Stock Price Valuation Calculator:
 
 ### Step 1: Clone the Repository
