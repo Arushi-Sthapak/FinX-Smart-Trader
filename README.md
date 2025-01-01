@@ -57,5 +57,12 @@ python -m streamlit run app.py
 After running the above command, Streamlit will generate a local URL (e.g., http://localhost:8501).
 Open this URL in your web browser to access the app.
 
+## Note
+You can comment out line no 23 in app.py to see the live web scraping.
+```bash
+ options.add_argument("--headless")
+```
+
+
 
 
