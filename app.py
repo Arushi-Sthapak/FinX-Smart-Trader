@@ -265,6 +265,7 @@ def process_financial_data(input_file):
     try:
         data = pd.read_csv(input_file)
         data['EBITDA'] = data['Operating profit']
+        data['Market Capitalisation'] = data['Market Capitalization']
         data['Enterprise Value'] = data.apply(calculate_ev, axis=1)
         data['EV/EBITDA'] = data.apply(calculate_ev_ebitda, axis=1)
         data = calculate_ev_ebitda_share_price(data)
@@ -382,19 +383,31 @@ if uploaded_file:
     processed_data = process_financial_data(uploaded_file)
     if processed_data is not None:
         # Split Data into Non-SME and SME
-        non_sme = processed_data[processed_data['Is SME'] == 0].sort_values(by='Gain%', ascending=False).head(10)
-        sme = processed_data[processed_data['Is SME'] == 1].sort_values(by='Gain%', ascending=False).head(10)
+        non_sme = processed_data[processed_data['Is SME'] == 0].sort_values(by='Gain%', ascending=False)
+        sme = processed_data[processed_data['Is SME'] == 1].sort_values(by='Gain%', ascending=False)
+        non_sme_screened =  processed_data[(processed_data['Is SME'] == 0) & (processed_data['Sales']>50) & (processed_data['Operating profit']>10)].sort_values(by='Gain%', ascending=False)
+        sme_screened =  processed_data[(processed_data['Is SME'] == 1) & (processed_data['Sales']>5) & (processed_data['Operating profit']>1)].sort_values(by='Gain%', ascending=False)
 
         # Tab Layout
-        tab1, tab2 = st.tabs(["Top 10 Non-SME Companies", "Top 10 SME Companies"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Non-SME Companies", "SME Companies","Non-SME Screened Companies","SME Screened Companies"])
 
         with tab1:
-            st.subheader("Top 10 Non-SME Companies")
-            st.dataframe(non_sme[['Name', 'Gain%', 'Current Price', 'Final expected price']])
+            st.subheader("Non-SME Companies")
+            st.dataframe(non_sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
 
         with tab2:
-            st.subheader("Top 10 SME Companies")
-            st.dataframe(sme[['Name', 'Gain%', 'Current Price', 'Final expected price']])
+            st.subheader("SME Companies")
+            st.dataframe(sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
+        
+        with tab3:
+            st.subheader("Non-SME Screened Companies")
+            st.dataframe(non_sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
+
+        with tab4:
+            st.subheader("SME Screened Companies")
+            st.dataframe(sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
+
+        
 
     # After processing the data, add this button for download
     if uploaded_file and processed_data is not None:
