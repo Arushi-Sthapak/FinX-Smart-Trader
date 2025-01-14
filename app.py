@@ -182,7 +182,8 @@ def calculate_pe_method_share_price(df):
         except Exception as e:
             # Handle exceptions and set the output to None if any errors occur
             df.loc[index, 'Value as per Price to Earnings Multiple'] = None
-            st.warning(f"Error processing row {index}: {e}")
+            st.warning(f"Error processing row, for company {df.loc[index, 'Name']}: {e}")
+            # st.write(f"Value of 'name' column in row {index}: {df.loc[index, 'name']}")
 
     return df
 
@@ -193,6 +194,11 @@ def calculate_pb_method_share_price(df):
           industry_pb = max(row['Industry PBV'], 1) if pd.notnull(row['Industry PBV']) else 1
           book_value_2yr_back = max(row['Book value preceding year'], 1) if pd.notnull(row['Book value preceding year']) else 1
           book_value = max(row['Book value'], 1) if pd.notnull(row['Book value']) else 1
+
+          if price_to_book == 1 or industry_pb==1 or book_value_2yr_back==1 or book_value==1:
+            PB_elements_is_1 = "yes"
+          else:
+            PB_elements_is_1 = "no"
 
           # Growth in book value
           growth_in_book_value_a = ((book_value / book_value_2yr_back)**0.5 - 1) * 100
@@ -228,11 +234,12 @@ def calculate_pb_method_share_price(df):
 
           # Assign the calculated value to the DataFrame
           df.loc[index, 'Value as per PB Multiple'] = average_market_price_per_share
+          df.loc[index, 'PB_elements_is_1'] = PB_elements_is_1
 
         except Exception as e:
             # Handle exceptions and set the output to None if any errors occur
             df.loc[index, 'Value as per PB Multiple'] = None
-            st.warning(f"Error processing row {index}: {e}")
+            st.warning(f"Error processing row, for company {df.loc[index, 'Name']}: {e}")
 
     return df
 
@@ -393,26 +400,26 @@ if uploaded_file:
 
         with tab1:
             st.subheader("Non-SME Companies")
-            st.dataframe(non_sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
+            st.dataframe(non_sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
 
         with tab2:
             st.subheader("SME Companies")
-            st.dataframe(sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
+            st.dataframe(sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
         
         with tab3:
             st.subheader("Non-SME Screened Companies")
-            st.dataframe(non_sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
+            st.dataframe(non_sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
 
         with tab4:
             st.subheader("SME Screened Companies")
-            st.dataframe(sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation']])
+            st.dataframe(sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation','PB_elements_is_1']], hide_index=True)
 
         
 
     # After processing the data, add this button for download
     if uploaded_file and processed_data is not None:
       # Prepare the data for downloading
-      download_data = processed_data[['Name', 'Gain%', 'Current Price', 'Final expected price']].sort_values(by='Gain%', ascending=False)
+      download_data = processed_data[['Name', 'Gain%', 'Current Price', 'Final expected price', 'PB_elements_is_1']].sort_values(by='Gain%', ascending=False)
 
       # Convert the dataframe to CSV format
       csv_data = convert_df_to_csv(download_data)
