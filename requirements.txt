@@ -3,4 +3,5 @@ streamlit==1.25.0
 selenium==4.27.1
 python-dotenv==1.0.1
 webdriver-manager
+plotly==5.24.1
 
