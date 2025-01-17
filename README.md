@@ -1,4 +1,5 @@
-# Stock Price Valuation Calculator  
+# FinX - Your Smart Trader
+# Financial Analysis and Portfolio Management App 
 
 The **Stock Price Valuation Calculator** is a Streamlit-based web application designed to analyze and determine the intrinsic value of stocks. This tool is ideal for investors, analysts, and students seeking to make informed decisions based on proven financial models.  
 
