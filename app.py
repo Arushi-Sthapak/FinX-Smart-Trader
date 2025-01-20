@@ -474,7 +474,7 @@ with tabs[1]:
 
         # Display processed portfolio
         st.subheader("Processed Portfolio Data")
-        selected_columns = ['Name_stocks','Qty.', 'Avg. cost', 'LTP', 'P&L/%', 'Max Value', 'Final expected price','HOLD/SELL']
+        selected_columns = ['Instrument_stocks','Qty.', 'Avg. cost', 'LTP', 'P&L/%', 'Max Value', 'Final expected price','HOLD/SELL']
         st.dataframe(processed_portfolio[selected_columns])
 
         # Generate and display graphs
