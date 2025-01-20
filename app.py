@@ -451,7 +451,7 @@ with tabs[1]:
 
         # Process data
         def process_portfolio_data(portfolio_df, all_stocks_df):
-            merged_df = portfolio_df.merge(all_stocks_df, left_on="Name", right_on="NSE Code", how="left", suffixes=("_portfolio","_stocks"))
+            merged_df = portfolio_df.merge(all_stocks_df, left_on="Instrument", right_on="NSE Code", how="left", suffixes=("_portfolio","_stocks"))
             merged_df['P&L/%'] = ((merged_df['LTP'] * merged_df['Qty.']) - 
                                   (merged_df['Avg. cost'] * merged_df['Qty.'])) / \
                                  (merged_df['Avg. cost'] * merged_df['Qty.']) * 100
