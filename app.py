@@ -4,6 +4,8 @@ import plotly.express as px
 
 import os
 import time
+import hashlib
+import pickle
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -178,13 +180,89 @@ def calculate_gain_percentage(df):
             df.loc[index, 'Final expected price'] = None 
     return df
 
+# Save and load functions for file persistence
+# def save_uploaded_file(uploaded_file, save_dir="/tmp"):
+#     os.makedirs(save_dir, exist_ok=True)
+
+#     # Check if uploaded_file is a file-like object (e.g., from a file upload form)
+#     if hasattr(uploaded_file, 'name'):
+#         file_path = os.path.join(save_dir, uploaded_file.name)
+#         # Write the file content to disk
+#         with open(file_path, "wb") as f:
+#             f.write(uploaded_file.getbuffer())
+#     else:
+#         # If uploaded_file is a string (file path), use it directly
+#         file_path = os.path.join(save_dir, os.path.basename(uploaded_file))
+#         # In this case, just copy the file from the given path
+#         with open(file_path, "wb") as f:
+#             with open(uploaded_file, "rb") as src:
+#                 f.write(src.read())
+
+#     return file_path
+    # file_path = os.path.join(save_dir, uploaded_file.name)
+    # with open(file_path, "wb") as f:
+    #     f.write(uploaded_file.getbuffer())
+    # return file_path
+
+# def save_uploaded_file(uploaded_file):
+#     folder = "uploaded_files"
+#     os.makedirs(folder, exist_ok=True)  # Ensure the directory exists
+#     file_path = os.path.join(folder, uploaded_file.name)
+#     with open(file_path, "wb") as f:
+#         f.write(uploaded_file.getbuffer())
+#     return file_path
+
+def save_uploaded_file(uploaded_file):
+    folder = "uploads"
+    os.makedirs(folder, exist_ok=True)
+
+    if isinstance(uploaded_file, str):
+        # If uploaded_file is a file path (from scraping), return it as is
+        return uploaded_file
+    else:
+        # If uploaded_file is a file-like object, save it locally
+        file_path = os.path.join(folder, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        return file_path
+
+
+# Function to load existing files if the user refreshes
+def load_saved_file():
+    folder = "uploaded_files"
+    if os.path.exists(folder):
+        files = os.listdir(folder)
+        if files:
+            return os.path.join(folder, files[0])  # Load the first file by default
+    return None
+
+def hash_file(file_path):
+    hasher = hashlib.md5()
+    with open(file_path, "rb") as f:
+        buf = f.read()
+        hasher.update(buf)
+    return hasher.hexdigest()
+
+def save_state(data, state_file="/tmp/app_state.pkl"):
+    with open(state_file, "wb") as f:
+        pickle.dump(data, f)
+
+def load_state(state_file="/tmp/app_state.pkl"):
+    if os.path.exists(state_file):
+        with open(state_file, "rb") as f:
+            return pickle.load(f)
+    return None
+
 # Streamlit App
 st.set_page_config(page_title="Financial Dashboard & Portfolio Analysis", layout="wide", page_icon="📈")
 st.title("Financial Analysis & Portfolio Management")
 
+# Initialize variables
+state_file = "/tmp/app_state.pkl"
+state = load_state(state_file) or {"last_file_hash": None, "processed_data": None}
+
 # Tabs for functionality
 tabs = st.tabs(["Financial Dashboard", "Portfolio Analysis"])
-
 
 # Load environment variables
 load_dotenv()
@@ -361,79 +439,97 @@ with tabs[0]:
                 uploaded_file = downloaded_file
     # Main Application
     if uploaded_file:
-        processed_data = process_financial_data(uploaded_file)
-        if processed_data is not None:
-            # Split Data into Non-SME and SME
-            non_sme = processed_data[processed_data['Is SME'] == 0].sort_values(by='Gain%', ascending=False)
-            sme = processed_data[processed_data['Is SME'] == 1].sort_values(by='Gain%', ascending=False)
-            non_sme_screened =  processed_data[(processed_data['Is SME'] == 0) & (processed_data['Sales']>50) & (processed_data['Operating profit']>10)].sort_values(by='Gain%', ascending=False)
-            sme_screened =  processed_data[(processed_data['Is SME'] == 1) & (processed_data['Sales']>5) & (processed_data['Operating profit']>1)].sort_values(by='Gain%', ascending=False)
+        file_path = save_uploaded_file(uploaded_file)
+        st.session_state['uploaded_file_path'] = file_path
+        file_hash = hash_file(uploaded_file)
+        if file_hash != st.session_state["last_file_hash"]:
+            st.info("Processing new file...")
+            processed_data = process_financial_data(file_path)  
+            st.session_state["last_file_hash"] = file_hash
+        elif "uploaded_file" in st.session_state:
+            # Retrieve the file from session state
+            file_path = st.session_state["uploaded_file"]
+    
+    if "uploaded_file_path" in st.session_state:
+        uploaded_file = st.session_state["uploaded_file_path"]
+        st.info(f"Using previously uploaded file: {os.path.basename(uploaded_file)}")
+        file_path = uploaded_file
+        # Process file if hash matches or it's newly uploaded
+        if file_path and file_hash == st.session_state.get("last_file_hash"):
 
-            # Tab Layout
-            tab1, tab2, tab3, tab4 = st.tabs(["Non-SME Companies", "SME Companies","Non-SME Screened Companies","SME Screened Companies"])
+            processed_data = process_financial_data(file_path)
+            if processed_data is not None:
+                # Split Data into Non-SME and SME
+                non_sme = processed_data[processed_data['Is SME'] == 0].sort_values(by='Gain%', ascending=False)
+                sme = processed_data[processed_data['Is SME'] == 1].sort_values(by='Gain%', ascending=False)
+                non_sme_screened =  processed_data[(processed_data['Is SME'] == 0) & (processed_data['Sales']>50) & (processed_data['Operating profit']>10)].sort_values(by='Gain%', ascending=False)
+                sme_screened =  processed_data[(processed_data['Is SME'] == 1) & (processed_data['Sales']>5) & (processed_data['Operating profit']>1)].sort_values(by='Gain%', ascending=False)
 
-            with tab1:
-                st.subheader("Non-SME Companies")
-                st.dataframe(non_sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
+                # Tab Layout
+                tab1, tab2, tab3, tab4 = st.tabs(["Non-SME Companies", "SME Companies","Non-SME Screened Companies","SME Screened Companies"])
 
-            with tab2:
-                st.subheader("SME Companies")
-                st.dataframe(sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
+                with tab1:
+                    st.subheader("Non-SME Companies")
+                    st.dataframe(non_sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
+
+                with tab2:
+                    st.subheader("SME Companies")
+                    st.dataframe(sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
         
-            with tab3:
-                st.subheader("Non-SME Screened Companies")
-                st.dataframe(non_sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
+                with tab3:
+                    st.subheader("Non-SME Screened Companies")
+                    st.dataframe(non_sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
 
-            with tab4:
-                st.subheader("SME Screened Companies")
-                st.dataframe(sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation','PB_elements_is_1']], hide_index=True)
+                with tab4:
+                    st.subheader("SME Screened Companies")
+                    st.dataframe(sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation','PB_elements_is_1']], hide_index=True)
 
         
 
-        # After processing the data, add this button for download
-        if uploaded_file and processed_data is not None:
-            # Prepare the data for downloading
-            download_data = processed_data[['Name', 'Gain%', 'Current Price', 'Final expected price', 'PB_elements_is_1']].sort_values(by='Gain%', ascending=False)
+            # After processing the data, add this button for download
+            if uploaded_file and processed_data is not None:
+                # Prepare the data for downloading
+                download_data = processed_data[['Name', 'Gain%', 'Current Price', 'Final expected price', 'PB_elements_is_1']].sort_values(by='Gain%', ascending=False)
 
-            # Convert the dataframe to CSV format
-            csv_data = convert_df_to_csv(download_data)
+                # Convert the dataframe to CSV format
+                csv_data = convert_df_to_csv(download_data)
 
-            # Add the download button on the Streamlit app
-            st.download_button(
-                label="Download All Companies as CSV",
-                data=csv_data,
-                file_name="company_financials.csv",
-                mime="text/csv",
-                use_container_width=True  # Makes the button stretch to the container width
-                )
+                # Add the download button on the Streamlit app
+                st.download_button(
+                    label="Download All Companies as CSV",
+                    data=csv_data,
+                    file_name="company_financials.csv",
+                    mime="text/csv",
+                    use_container_width=True  # Makes the button stretch to the container width
+                    )
             
-            # Automate scraping if URL is provided
-            if st.button("Scrape Data"):
-                download_dir = os.getcwd()
-                with st.spinner("Scraping data..."):
-                    downloaded_file = download_file_from_screener_with_login(scraping_url, download_dir)
-                    if downloaded_file:
-                        st.success("Data scraped successfully.")
-                        with open(downloaded_file, "rb") as file:
-                            st.download_button(
-                                label="Download Scraped File",
-                                data=file,
-                                file_name="scraped_data.csv",
-                                mime="text/csv",
-                                )
-                        uploaded_file = downloaded_file
+                # Automate scraping if URL is provided
+                if st.button("Scrape Data"):
+                    download_dir = os.getcwd()
+                    with st.spinner("Scraping data..."):
+                        downloaded_file = download_file_from_screener_with_login(scraping_url, download_dir)
+                        if downloaded_file:
+                            st.success("Data scraped successfully.")
+                            with open(downloaded_file, "rb") as file:
+                                st.download_button(
+                                    label="Download Scraped File",
+                                    data=file,
+                                    file_name="scraped_data.csv",
+                                    mime="text/csv",
+                                    )
+                            uploaded_file = downloaded_file
 
 
-            # Bottom Filter Section
-            st.subheader("Select and Filter Company Data")
-            filter_company = st.selectbox("Select a Company for Summary", processed_data['Name'].unique())
+                # Bottom Filter Section
+                st.subheader("Select and Filter Company Data")
+                filter_company = st.selectbox("Select a Company for Summary", processed_data['Name'].unique())
 
-            if filter_company:
-                filtered_company = processed_data[processed_data['Name'] == filter_company].iloc[0]
-                display_financial_health_summary(filtered_company)
+                if filter_company:
+                    filtered_company = processed_data[processed_data['Name'] == filter_company].iloc[0]
+                    display_financial_health_summary(filtered_company)
 
-            else:
-                st.info("Please upload a CSV file to proceed.")
+                else:
+                    st.info("Please upload a CSV file to proceed.")
 
 
 # Tab 2: Portfolio Analysis
@@ -529,5 +625,3 @@ with tabs[1]:
         )
     else:
         st.info("Please upload both Portfolio and All Stocks CSV files.")
-
-
