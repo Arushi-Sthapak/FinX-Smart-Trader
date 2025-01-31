@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-
+from st_aggrid import AgGrid, GridOptionsBuilder
 import os
 import time
 from selenium import webdriver
@@ -10,7 +10,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from dotenv import load_dotenv
-
 
 # Utility Functions
 def calculate_ev(row):
@@ -40,9 +39,9 @@ def calculate_ev_ebitda_share_price(df):
             if equity_value is not None:
                 equity_values_per_scene.append(equity_value)
         if equity_values_per_scene:
-            df.loc[index, 'Price per Share (EV/EBITDA)'] = sum(equity_values_per_scene) / len(equity_values_per_scene)
+            df.loc[index, 'Value as per EV/EBITDA Method'] = sum(equity_values_per_scene) / len(equity_values_per_scene)
         else:
-            df.loc[index, 'Price per Share (EV/EBITDA)'] = None
+            df.loc[index, 'Value as per EV/EBITDA Method'] = None
     return df
 
 def calculate_revenue_method_share_price(df):
@@ -62,11 +61,11 @@ def calculate_revenue_method_share_price(df):
                 expected_mcap_b = estimated_revenue_b * revenue_multiple
                 price_per_share_b = expected_mcap_b / row['Number of equity shares']
 
-                df.loc[index, 'Price per Share (Revenue Method)'] = (price_per_share_a + price_per_share_b) / 2
+                df.loc[index, 'Value as per Revenue Method'] = (price_per_share_a + price_per_share_b) / 2
             else:
-                df.loc[index, 'Price per Share (Revenue Method)'] = None
+                df.loc[index, 'Value as per Revenue Method'] = None
         except:
-            df.loc[index, 'Price per Share (Revenue Method)'] = None
+            df.loc[index, 'Value as per Revenue Method'] = None
     return df
 
 def calculate_pe_method_share_price(df):
@@ -103,9 +102,9 @@ def calculate_pe_method_share_price(df):
                 (price_per_share_d * 0.3)
             )
 
-            df.loc[index, 'Value as per Price to Earnings Multiple'] = final_value_pe
+            df.loc[index, 'Value as per PE Multiple'] = final_value_pe
         except Exception as e:
-            df.loc[index, 'Value as per Price to Earnings Multiple'] = None
+            df.loc[index, 'Value as per PE Multiple'] = None
     return df
 
 def calculate_pb_method_share_price(df):
@@ -159,17 +158,17 @@ def calculate_gain_percentage(df):
     for index, row in df.iterrows():
         try:
             gain = ((
-                0.25 * row['Value as per Price to Earnings Multiple'] +
-                0.25 * row['Price per Share (EV/EBITDA)'] +
-                0.25 * row['Price per Share (Revenue Method)'] +
+                0.25 * row['Value as per PE Multiple'] +
+                0.25 * row['Value as per EV/EBITDA Method'] +
+                0.25 * row['Value as per Revenue Method'] +
                 0.25 * row['Value as per PB Multiple']
             ) - row['Current Price']) / row['Current Price'] * 100
 
             df.loc[index, 'Gain%'] = gain
             df.loc[index, 'Final expected price'] = (
-                0.25 * row['Value as per Price to Earnings Multiple'] +
-                0.25 * row['Price per Share (EV/EBITDA)'] +
-                0.25 * row['Price per Share (Revenue Method)'] +
+                0.25 * row['Value as per PE Multiple'] +
+                0.25 * row['Value as per EV/EBITDA Method'] +
+                0.25 * row['Value as per Revenue Method'] +
                 0.25 * row['Value as per PB Multiple']
             )
         except Exception as e:
@@ -249,6 +248,35 @@ def download_file_from_screener_with_login(url, download_dir):
     finally:
         driver.quit()
 
+# Function to configure AgGrid table
+def configure_aggrid(df):
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(
+        wrapHeaderText=True,  # Wrap text in headers
+        autoHeaderHeight=True,  # Adjust row height automatically
+        resizable=True,  # Allow column resizing
+        filterable=False,  # Disable filtering (optional)
+        sortable=True  # Allow sorting
+    )
+    # Set specific column widths
+    gb.configure_column("Name", width=90)
+    gb.configure_column("Market Capitalisation", width=135)
+    gb.configure_column("Current Price", width=100)
+    gb.configure_column("Final expected price", width=120)
+    gb.configure_column("Gain%", width=100)
+    gb.configure_column("Value as per EV/EBITDA Method", width=140)
+    gb.configure_column("Value as per Revenue Method", width=140)
+    gb.configure_column("Value as per PE Multiple", width=140)
+    gb.configure_column("Value as per PB Multiple", width=140)
+    gb.configure_column("PB_elements_is_1", width=90)
+    gb.configure_grid_options(
+        suppressHorizontalScroll=True,  # Prevent horizontal scrolling
+        domLayout='autoHeight',  # Adjust table height dynamically
+        pagination=True,  # Enable pagination
+        paginationPageSize=10  # Show only 10 rows per page
+    )
+    return gb.build()
+
 # Process Data Function
 def process_financial_data(input_file):
     try:
@@ -259,7 +287,7 @@ def process_financial_data(input_file):
         data['EV/EBITDA'] = data.apply(calculate_ev_ebitda, axis=1)
         data = calculate_ev_ebitda_share_price(data)
         data = calculate_revenue_method_share_price(data)
-        data = calculate_pe_method_share_price(data)
+        data= calculate_pe_method_share_price(data)
         data = calculate_pb_method_share_price(data)
         data = calculate_gain_percentage(data)
         return data
@@ -297,6 +325,7 @@ def financial_health_summary(row):
 
     return pd.DataFrame([summary])
 
+
 def display_financial_health_summary(df):
     st.markdown("## A Quick Look Into the Financial Health of the Company")
 
@@ -330,8 +359,8 @@ def display_financial_health_summary(df):
             st.metric(label="YOY Profit%", value=summary['YOY Profit%'].iloc[0])
 
 
-        # # Add spacing between companies
-        # st.markdown("<hr>", unsafe_allow_html=True)
+        # Add spacing between companies
+        st.markdown("<hr>", unsafe_allow_html=True)
 
 
 
@@ -368,32 +397,40 @@ with tabs[0]:
             sme = processed_data[processed_data['Is SME'] == 1].sort_values(by='Gain%', ascending=False)
             non_sme_screened =  processed_data[(processed_data['Is SME'] == 0) & (processed_data['Sales']>50) & (processed_data['Operating profit']>10)].sort_values(by='Gain%', ascending=False)
             sme_screened =  processed_data[(processed_data['Is SME'] == 1) & (processed_data['Sales']>5) & (processed_data['Operating profit']>1)].sort_values(by='Gain%', ascending=False)
-
             # Tab Layout
             tab1, tab2, tab3, tab4 = st.tabs(["Non-SME Companies", "SME Companies","Non-SME Screened Companies","SME Screened Companies"])
 
             with tab1:
                 st.subheader("Non-SME Companies")
-                st.dataframe(non_sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
+                grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
+                AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="non_sme_table")
+
+                #st.dataframe(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], use_container_width=True, hide_index=True)
 
             with tab2:
                 st.subheader("SME Companies")
-                st.dataframe(sme[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
+                grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
+                AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_table")
+                #st.dataframe(sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']],use_container_width=True, hide_index=True)
         
             with tab3:
                 st.subheader("Non-SME Screened Companies")
-                st.dataframe(non_sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation', 'PB_elements_is_1']], hide_index=True)
+                grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
+                AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="non_sme_s_table")
+                #st.dataframe(non_sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], use_container_width=True, hide_index=True)
 
             with tab4:
                 st.subheader("SME Screened Companies")
-                st.dataframe(sme_screened[['Name', 'Gain%', 'Current Price', 'Final expected price', 'Market Capitalisation','PB_elements_is_1']], hide_index=True)
+                grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
+                AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_s_table")
+                #st.dataframe(sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], use_container_width=True, hide_index=True)
 
         
 
         # After processing the data, add this button for download
         if uploaded_file and processed_data is not None:
             # Prepare the data for downloading
-            download_data = processed_data[['Name', 'Gain%', 'Current Price', 'Final expected price', 'PB_elements_is_1']].sort_values(by='Gain%', ascending=False)
+            download_data = processed_data[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']].sort_values(by='Gain%', ascending=False)
 
             # Convert the dataframe to CSV format
             csv_data = convert_df_to_csv(download_data)
