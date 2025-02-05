@@ -255,11 +255,11 @@ def configure_aggrid(df):
         wrapHeaderText=True,  # Wrap text in headers
         autoHeaderHeight=True,  # Adjust row height automatically
         resizable=True,  # Allow column resizing
-        filterable=False,  # Disable filtering (optional)
+        filterable=True,  # Disable filtering (optional)
         sortable=True  # Allow sorting
     )
     # Set specific column widths
-    gb.configure_column("Name", width=90)
+    gb.configure_column("Name", filter="agTextColumnFilter", floatingFilter=True, width=90)
     gb.configure_column("Market Capitalisation", width=135)
     gb.configure_column("Current Price", width=100)
     gb.configure_column("Final expected price", width=120)
@@ -275,7 +275,8 @@ def configure_aggrid(df):
         pagination=True,  # Enable pagination
         paginationPageSize=10  # Show only 10 rows per page
     )
-    return gb.build()
+    grid_options = gb.build()
+    return grid_options
 
 # Process Data Function
 def process_financial_data(input_file):
