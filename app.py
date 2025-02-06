@@ -370,10 +370,6 @@ UPLOAD_DIR = "uploaded_files"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 DB_PATH = os.path.join(UPLOAD_DIR, "meta.db")
 
-# Initialize session state if not exists
-if 'uploaded_file' not in st.session_state:
-    st.session_state['uploaded_file'] = None
-
 # Initialize SQLite database
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -385,21 +381,16 @@ def init_db():
     conn.commit()
 
 # Save file and update metadata
-# Save file and update metadata
 def save_uploaded_file(uploaded_file):
-    st.session_state['uploaded_file'] = uploaded_file
+    file_data = uploaded_file.getvalue()
 
-# def save_uploaded_file(uploaded_file):
-#     file_path = os.path.join(UPLOAD_DIR, "financial_data.csv")
-#     with open(file_path, "wb") as f:
-#         f.write(uploaded_file.getbuffer())
-    
     # Save metadata
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_metadata")  # Keep only last entry
-        cursor.execute("INSERT INTO file_metadata (filename, upload_time) VALUES (?, ?)",("financial_data.csv", datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        cursor.execute("INSERT INTO file_metadata (filename, upload_time, file_data) VALUES (?, ?, ?)",(uploaded_file.name, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), file_data))
         conn.commit()
+    return file_path
 
 # Get last upload time
 def get_last_upload_time():
@@ -408,6 +399,14 @@ def get_last_upload_time():
         cursor.execute("SELECT upload_time FROM file_metadata ORDER BY id DESC LIMIT 1")
         row = cursor.fetchone()
     return row[0] if row else "No file uploaded yet"
+
+# Retrieve last uploaded file
+def get_last_uploaded_file():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT filename, file_data FROM file_metadata ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+    return row if row else (None, None)
 
 # Initialize DB
 init_db()
@@ -442,7 +441,7 @@ with tabs[0]:
     # Main Application
     if uploaded_file:
         save_uploaded_file(uploaded_file)
-        st.success(f"File saved in memory: {uploaded_file.name}")
+        st.success(f"File saved in database: {uploaded_file.name}")
         st.write(f"Uploaded at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         processed_data = process_financial_data(uploaded_file)
         if processed_data is not None:
@@ -479,7 +478,15 @@ with tabs[0]:
                 AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_s_table")
                 #st.dataframe(sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], use_container_width=True, hide_index=True)
 
-        
+    # Retrieve last stored file from database
+    stored_filename, stored_file_data = get_last_uploaded_file()
+    if stored_filename and stored_file_data:
+        st.download_button(
+            label="Download Last Stored File",
+            data=stored_file_data,
+            file_name=stored_filename,
+            mime="text/csv"
+        )  
 
         # After processing the data, add this button for download
         if uploaded_file and processed_data is not None:
@@ -525,15 +532,7 @@ with tabs[0]:
 
             else:
                 st.info("Please upload a CSV file to proceed.")
-    
-    # Download last uploaded file
-    if st.session_state['uploaded_file']:
-        st.download_button(
-            label="Download Last Uploaded File",
-            data=st.session_state['uploaded_file'].getvalue(),
-            file_name=st.session_state['uploaded_file'].name,
-            mime="text/csv"
-        )
+
 
 # Tab 2: Portfolio Analysis
 with tabs[1]:
