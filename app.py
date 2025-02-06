@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 import plotly.express as px
 from st_aggrid import AgGrid, GridOptionsBuilder
 import os
+import sqlite3
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -363,7 +365,45 @@ def display_financial_health_summary(df):
         # Add spacing between companies
         st.markdown("<hr>", unsafe_allow_html=True)
 
+# Ensure directory exists
+UPLOAD_DIR = "uploaded_files"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+DB_PATH = os.path.join(UPLOAD_DIR, "meta.db")
 
+# Initialize SQLite database
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS file_metadata (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        filename TEXT,
+                        upload_time TEXT)''')
+    conn.commit()
+
+# Save file and update metadata
+def save_uploaded_file(uploaded_file):
+    file_path = os.path.join(UPLOAD_DIR, "financial_data.csv")
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    
+    # Save metadata
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM file_metadata")  # Keep only last entry
+        cursor.execute("INSERT INTO file_metadata (filename, upload_time) VALUES (?, ?)",("financial_data.csv", datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        conn.commit()
+    return file_path
+
+# Get last upload time
+def get_last_upload_time():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT upload_time FROM file_metadata ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+    return row[0] if row else "No file uploaded yet"
+
+# Initialize DB
+init_db()
 
 
 # Tab 1: Financial Dashboard (Existing functionality)
@@ -371,6 +411,9 @@ with tabs[0]:
     st.header("Financial Dashboard")
     st.write("This section contains your existing functionality.")
     # Include your existing code here
+    # Display last uploaded file timestamp
+    last_upload_time = get_last_upload_time()
+    st.write(f"**Last Uploaded File:** {last_upload_time}")
 
     uploaded_file = st.file_uploader("Upload Stock Data (CSV)", type="csv")
     scraping_url = st.text_input("Enter the Screener.in URL:", "https://www.screener.in/screens/2284718/all-stocks-download/")
@@ -391,6 +434,9 @@ with tabs[0]:
                 uploaded_file = downloaded_file
     # Main Application
     if uploaded_file:
+        file_path = save_uploaded_file(uploaded_file)
+        st.success(f"File saved: {file_path}")
+        st.write(f"Uploaded at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         processed_data = process_financial_data(uploaded_file)
         if processed_data is not None:
             # Split Data into Non-SME and SME
