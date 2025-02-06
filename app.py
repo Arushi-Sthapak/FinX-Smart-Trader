@@ -370,6 +370,10 @@ UPLOAD_DIR = "uploaded_files"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 DB_PATH = os.path.join(UPLOAD_DIR, "meta.db")
 
+# Initialize session state if not exists
+if 'uploaded_file' not in st.session_state:
+    st.session_state['uploaded_file'] = None
+
 # Initialize SQLite database
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -381,10 +385,14 @@ def init_db():
     conn.commit()
 
 # Save file and update metadata
+# Save file and update metadata
 def save_uploaded_file(uploaded_file):
-    file_path = os.path.join(UPLOAD_DIR, "financial_data.csv")
-    with open(file_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    st.session_state['uploaded_file'] = uploaded_file
+
+# def save_uploaded_file(uploaded_file):
+#     file_path = os.path.join(UPLOAD_DIR, "financial_data.csv")
+#     with open(file_path, "wb") as f:
+#         f.write(uploaded_file.getbuffer())
     
     # Save metadata
     with sqlite3.connect(DB_PATH) as conn:
@@ -392,7 +400,6 @@ def save_uploaded_file(uploaded_file):
         cursor.execute("DELETE FROM file_metadata")  # Keep only last entry
         cursor.execute("INSERT INTO file_metadata (filename, upload_time) VALUES (?, ?)",("financial_data.csv", datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         conn.commit()
-    return file_path
 
 # Get last upload time
 def get_last_upload_time():
@@ -434,8 +441,8 @@ with tabs[0]:
                 uploaded_file = downloaded_file
     # Main Application
     if uploaded_file:
-        file_path = save_uploaded_file(uploaded_file)
-        st.success(f"File saved: {file_path}")
+        save_uploaded_file(uploaded_file)
+        st.success(f"File saved in memory: {uploaded_file.name}")
         st.write(f"Uploaded at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         processed_data = process_financial_data(uploaded_file)
         if processed_data is not None:
@@ -518,7 +525,15 @@ with tabs[0]:
 
             else:
                 st.info("Please upload a CSV file to proceed.")
-
+    
+    # Download last uploaded file
+    if st.session_state['uploaded_file']:
+        st.download_button(
+            label="Download Last Uploaded File",
+            data=st.session_state['uploaded_file'].getvalue(),
+            file_name=st.session_state['uploaded_file'].name,
+            mime="text/csv"
+        )
 
 # Tab 2: Portfolio Analysis
 with tabs[1]:
