@@ -377,6 +377,7 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS file_metadata (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         filename TEXT,
+                        file_data BLOB,
                         upload_time TEXT)''')
     conn.commit()
 
