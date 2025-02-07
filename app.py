@@ -4,6 +4,7 @@ from datetime import datetime
 import plotly.express as px
 from st_aggrid import AgGrid, GridOptionsBuilder
 import os
+import io
 import sqlite3
 import time
 from selenium import webdriver
@@ -377,21 +378,23 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS file_metadata (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         filename TEXT,
-                        file_data BLOB,
-                        upload_time TEXT)''')
+                        upload_time TEXT,
+                        file_data BLOB)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS file_storage (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            file_data BLOB)''')
     conn.commit()
 
 # Save file and update metadata
 def save_uploaded_file(uploaded_file):
     file_data = uploaded_file.getvalue()
-
     # Save metadata
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_metadata")  # Keep only last entry
         cursor.execute("INSERT INTO file_metadata (filename, upload_time, file_data) VALUES (?, ?, ?)",(uploaded_file.name, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), file_data))
         conn.commit()
-    return file_path
+    
 
 # Get last upload time
 def get_last_upload_time():
@@ -407,6 +410,9 @@ def get_last_uploaded_file():
         cursor = conn.cursor()
         cursor.execute("SELECT filename, file_data FROM file_metadata ORDER BY id DESC LIMIT 1")
         row = cursor.fetchone()
+    if row:
+        filename, file_data = row
+        return filename, io.BytesIO(file_data)  # Convert bytes to BytesIO for Streamlit
     return row if row else (None, None)
 
 # Initialize DB
@@ -417,8 +423,6 @@ init_db()
 with tabs[0]:
     st.header("Financial Dashboard")
     st.write("This section contains your existing functionality.")
-    # Include your existing code here
-    # Display last uploaded file timestamp
     last_upload_time = get_last_upload_time()
     st.write(f"**Last Uploaded File:** {last_upload_time}")
 
@@ -441,7 +445,7 @@ with tabs[0]:
                 uploaded_file = downloaded_file
     # Main Application
     if uploaded_file:
-        save_uploaded_file(uploaded_file)
+        uplaod_file = save_uploaded_file(uploaded_file)
         st.success(f"File saved in database: {uploaded_file.name}")
         st.write(f"Uploaded at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         processed_data = process_financial_data(uploaded_file)
@@ -482,11 +486,15 @@ with tabs[0]:
     # Retrieve last stored file from database
     stored_filename, stored_file_data = get_last_uploaded_file()
     if stored_filename and stored_file_data:
+        st.success(f"Automatically loaded last uploaded file: {stored_filename}")
+        
+    # Provide a download button for the last stored file
+    if stored_filename and stored_file_data:
         st.download_button(
-            label="Download Last Stored File",
-            data=stored_file_data,
-            file_name=stored_filename,
-            mime="text/csv"
+        label="Download Last Stored File",
+        data=stored_file_data,
+        file_name=stored_filename,
+        mime="text/csv"
         )  
 
         # After processing the data, add this button for download
