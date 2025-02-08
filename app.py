@@ -416,16 +416,23 @@ def get_last_upload_time():
         row = cursor.fetchone()
     return row[0] if row else "No file uploaded yet"
 
-# Retrieve last uploaded file
 def get_last_uploaded_file():
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT filename, file_data FROM file_metadata ORDER BY id DESC LIMIT 1")
-        row = cursor.fetchone()
-    if row:
-        filename, file_data = row
-        return filename, io.BytesIO(file_data)  # Convert bytes to BytesIO for Streamlit
-    return row if row else (None, None)
+        
+        # Get the last uploaded filename from file_metadata
+        cursor.execute("SELECT filename FROM file_metadata ORDER BY id DESC LIMIT 1")
+        filename_row = cursor.fetchone()
+        
+        # Get the last uploaded file data from file_storage
+        cursor.execute("SELECT file_data FROM file_storage ORDER BY id DESC LIMIT 1")
+        file_row = cursor.fetchone()
+    
+    # Ensure both filename and file_data exist
+    if filename_row and file_row:
+        return filename_row[0], io.BytesIO(file_row[0])  # Convert bytes to BytesIO for Streamlit
+    
+    return None, None  # No file found
 
 # Initialize DB
 init_db()
@@ -474,8 +481,6 @@ with tabs[0]:
     # Main Application
     if uploaded_file:
         save_uploaded_file(uploaded_file)
-        st.success(f"File saved in database: {filename}")
-        st.write(f"Uploaded at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         processed_data = process_financial_data(uploaded_file)
 
         if processed_data is not None:
