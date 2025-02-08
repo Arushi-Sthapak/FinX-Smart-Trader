@@ -12,6 +12,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
+import tempfile
 from dotenv import load_dotenv
 
 # Utility Functions
@@ -378,8 +379,7 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS file_metadata (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         filename TEXT,
-                        upload_time TEXT,
-                        file_data BLOB)''')
+                        upload_time TEXT)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS file_storage (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             file_data BLOB)''')
@@ -387,12 +387,24 @@ def init_db():
 
 # Save file and update metadata
 def save_uploaded_file(uploaded_file):
-    file_data = uploaded_file.getvalue()
+    # If uploaded_file is a path (str), read it as bytes
+    if isinstance(uploaded_file, str):  
+        with open(uploaded_file, "rb") as f:
+            file_data = f.read()
+        filename = os.path.basename(uploaded_file)
+    else:
+        file_data = uploaded_file.getvalue()  # Handle Streamlit uploaded file
+        filename = uploaded_file.name
+    # file_data = uploaded_file.getvalue()
     # Save metadata
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_metadata")  # Keep only last entry
-        cursor.execute("INSERT INTO file_metadata (filename, upload_time, file_data) VALUES (?, ?, ?)",(uploaded_file.name, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), file_data))
+        cursor.execute("DELETE FROM file_storage")  # Keep only last file
+        # cursor.execute("INSERT INTO file_metadata (filename, upload_time, file_data) VALUES (?, ?, ?)",(uploaded_file.name, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), file_data))
+        cursor.execute("INSERT INTO file_metadata (filename, upload_time) VALUES (?, ?)", (filename, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        cursor.execute("INSERT INTO file_storage (file_data) VALUES (?)", (file_data,))
+        
         conn.commit()
     
 
@@ -422,7 +434,8 @@ init_db()
 # Tab 1: Financial Dashboard (Existing functionality)
 with tabs[0]:
     st.header("Financial Dashboard")
-    st.write("This section contains your existing functionality.")
+    # Retrieve last stored file automatically
+    stored_filename, stored_file_data = get_last_uploaded_file()
     last_upload_time = get_last_upload_time()
     st.write(f"**Last Uploaded File:** {last_upload_time}")
 
@@ -443,12 +456,28 @@ with tabs[0]:
                         key="down-button"
                         )
                 uploaded_file = downloaded_file
+
+    # Use stored file if no new upload
+    if uploaded_file is None and stored_filename and stored_file_data:
+        st.success(f"Using stored file: {stored_filename}")
+        # Save stored file as a temporary CSV
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+            temp_file.write(stored_file_data.getvalue())  # Write binary content
+            temp_csv_path = temp_file.name  # Get temp file path
+
+        uploaded_file = temp_csv_path  # Pass temp file path for processing
+        filename = stored_filename
+    else:
+        filename = uploaded_file.name if uploaded_file else None  # Ensure filename is set correctly
+   
+                   
     # Main Application
     if uploaded_file:
-        uplaod_file = save_uploaded_file(uploaded_file)
-        st.success(f"File saved in database: {uploaded_file.name}")
+        save_uploaded_file(uploaded_file)
+        st.success(f"File saved in database: {filename}")
         st.write(f"Uploaded at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         processed_data = process_financial_data(uploaded_file)
+
         if processed_data is not None:
             # Split Data into Non-SME and SME
             non_sme = processed_data[processed_data['Is SME'] == 0].sort_values(by='Gain%', ascending=False)
@@ -482,11 +511,6 @@ with tabs[0]:
                 grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
                 AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_s_table")
                 #st.dataframe(sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], use_container_width=True, hide_index=True)
-
-    # Retrieve last stored file from database
-    stored_filename, stored_file_data = get_last_uploaded_file()
-    if stored_filename and stored_file_data:
-        st.success(f"Automatically loaded last uploaded file: {stored_filename}")
         
     # Provide a download button for the last stored file
     if stored_filename and stored_file_data:
