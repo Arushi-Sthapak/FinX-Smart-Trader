@@ -434,6 +434,68 @@ def get_last_uploaded_file():
     
     return None, None  # No file found
 
+# Function to get stored all stocks file from DB
+def get_stored_all_stocks_file():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT file_data FROM file_storage ORDER BY id DESC LIMIT 1")
+        file_row = cursor.fetchone()
+    if file_row:
+        return io.BytesIO(file_row[0])
+    return None
+
+# Function to save portfolio files in DB
+def save_portfolio_file(name, file):
+    file_data = file.getvalue()
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS portfolio_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                file_data BLOB,
+                upload_time TEXT
+            )
+        """)
+        cursor.execute("INSERT INTO portfolio_files (name, file_data, upload_time) VALUES (?, ?, ?)", 
+                       (name, file_data, datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        conn.commit()
+
+# Function to get all stored portfolio files
+def get_all_portfolio_files():
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        #Ensure the portfolio_files table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS portfolio_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                file_data BLOB,
+                upload_time TEXT
+            )
+        """)
+        conn.commit()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, upload_time FROM portfolio_files")
+        return cursor.fetchall()
+
+# Function to get a specific portfolio file from DB
+def get_portfolio_file(file_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT file_data FROM portfolio_files WHERE id = ?", (file_id,))
+        file_row = cursor.fetchone()
+    if file_row:
+        return io.BytesIO(file_row[0])
+    return None
+
+# Function to delete a portfolio file
+def delete_portfolio_file(file_id):
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM portfolio_files WHERE id = ?", (file_id,))
+        conn.commit()
+
 # Initialize DB
 init_db()
 
@@ -575,95 +637,148 @@ with tabs[0]:
 # Tab 2: Portfolio Analysis
 with tabs[1]:
     st.header("Portfolio Analysis")
+    
+    # Retrieve all stocks file from Tab 1
+    tab1_all_stocks_file = get_stored_all_stocks_file()
+    
+    if not tab1_all_stocks_file:
+        st.error("No All Stocks file found from Tab 1. Please upload a file in Tab 1 first.")
+        st.stop()
+    # Portfolio file upload
+    uploaded_portfolio = st.file_uploader("Upload Portfolio CSV", type="csv")
+    portfolio_name = st.text_input("Enter Portfolio Name")
+    if st.button("Save Portfolio"):
+        if uploaded_portfolio and portfolio_name:
+            save_portfolio_file(portfolio_name, uploaded_portfolio)
+            st.success(f"Portfolio '{portfolio_name}' saved successfully!")
+        else:
+            st.warning("Please provide both a file and a name.")   
+    
+    # List stored portfolios
+    st.subheader("Stored Portfolios")
+    with st.expander("📁 View Stored Portfolios", expanded=False):  # Collapsible section
+        portfolio_files = get_all_portfolio_files()
 
-    # Upload Portfolio and All Stocks Files
-    portfolio_file = st.file_uploader("Upload Portfolio CSV", type="csv")
-    all_stocks_file = st.file_uploader("Upload All Stocks CSV", type="csv")
+        if portfolio_files:
+            for file_id, name, upload_time in portfolio_files:
+                col1, col2, col3 = st.columns([3, 1, 1])
+                col1.write(f"📂 **{name}** (Uploaded: {upload_time})")
+                if col2.button("Load", key=f"load_{file_id}"):
+                    selected_portfolio = get_portfolio_file(file_id)
+                    if selected_portfolio:
+                        portfolio_df = pd.read_csv(selected_portfolio)
+                        st.write("Portfolio Data:", portfolio_df.head())
+                if col3.button("🗑️ Delete", key=f"delete_{file_id}"):
+                    delete_portfolio_file(file_id)
+                    st.rerun()
+        else:
+            st.write("No portfolios stored.")
 
-    if portfolio_file and all_stocks_file:
-        # Load data
-        portfolio_df = pd.read_csv(portfolio_file)
-        all_stocks_df = pd.read_csv(all_stocks_file)
+    # Export portfolio data
+    if portfolio_files:
+        if st.button("Export All Portfolios as CSV"):
+            with sqlite3.connect(DB_PATH) as conn:
+                query = "SELECT name, file_data FROM portfolio_files"
+                df = pd.read_sql_query(query, conn)
+                df.to_csv("all_portfolios.csv", index=False)
+            with open("all_portfolios.csv", "rb") as f:
+                st.download_button("Download CSV", f, "all_portfolios.csv", "text/csv")
+                
+    if portfolio_files:
+        # Create a dropdown for users to select a portfolio file
+        selected_portfolio_name = st.selectbox("Select Portfolio File", [f"{name} ({upload_time})" for _, name, upload_time in portfolio_files])
+    
+        # Find the selected file's ID
+        selected_file_id = next(file_id for file_id, name, upload_time in portfolio_files if f"{name} ({upload_time})" == selected_portfolio_name)
 
-        # Process data
-        def process_portfolio_data(portfolio_df, all_stocks_df):
-            merged_df = portfolio_df.merge(all_stocks_df, left_on="Instrument", right_on="NSE Code", how="left", suffixes=("_portfolio","_stocks"))
-            merged_df['P&L/%'] = ((merged_df['LTP'] * merged_df['Qty.']) - 
+        # Retrieve the selected portfolio file
+        portfolio_file = get_portfolio_file(selected_file_id)
+
+        if portfolio_file and tab1_all_stocks_file:
+            # Load data
+            portfolio_df = pd.read_csv(portfolio_file)
+            all_stocks_df = pd.read_csv(tab1_all_stocks_file)
+
+            # Process data
+            def process_portfolio_data(portfolio_df, all_stocks_df):
+                merged_df = portfolio_df.merge(all_stocks_df, left_on="Instrument", right_on="NSE Code", how="left", suffixes=("_portfolio","_stocks"))
+                merged_df['P&L/%'] = ((merged_df['LTP'] * merged_df['Qty.']) - 
                                   (merged_df['Avg. cost'] * merged_df['Qty.'])) / \
                                  (merged_df['Avg. cost'] * merged_df['Qty.']) * 100
-            merged_df['Max Value'] = merged_df[['Avg. cost', 'LTP']].max(axis=1)
-            merged_df['EBITDA'] = merged_df['Operating profit']
-            merged_df['Market Capitalisation'] = merged_df['Market Capitalization']
-            merged_df['Enterprise Value'] = merged_df.apply(calculate_ev, axis=1)
-            merged_df['EV/EBITDA'] = merged_df.apply(calculate_ev_ebitda, axis=1)
-            merged_df = calculate_ev_ebitda_share_price(merged_df)
-            merged_df = calculate_revenue_method_share_price(merged_df)
-            merged_df = calculate_pe_method_share_price(merged_df)
-            merged_df = calculate_pb_method_share_price(merged_df)
-            merged_df = calculate_gain_percentage(merged_df)
-            merged_df['HOLD/SELL'] = merged_df.apply(
-                lambda row: 'HOLD' if row['Final expected price'] > row['Max Value'] else 'SELL', axis=1
+                merged_df['Max Value'] = merged_df[['Avg. cost', 'LTP']].max(axis=1)
+                merged_df['EBITDA'] = merged_df['Operating profit']
+                merged_df['Market Capitalisation'] = merged_df['Market Capitalization']
+                merged_df['Enterprise Value'] = merged_df.apply(calculate_ev, axis=1)
+                merged_df['EV/EBITDA'] = merged_df.apply(calculate_ev_ebitda, axis=1)
+                merged_df = calculate_ev_ebitda_share_price(merged_df)
+                merged_df = calculate_revenue_method_share_price(merged_df)
+                merged_df = calculate_pe_method_share_price(merged_df)
+                merged_df = calculate_pb_method_share_price(merged_df)
+                merged_df = calculate_gain_percentage(merged_df)
+                merged_df['HOLD/SELL'] = merged_df.apply(
+                    lambda row: 'HOLD' if row['Final expected price'] > row['Max Value'] else 'SELL', axis=1
+                )
+                return merged_df
+            
+
+            processed_portfolio = process_portfolio_data(portfolio_df, all_stocks_df)
+
+            # Display processed portfolio
+            st.subheader("Processed Portfolio Data")
+            selected_columns = ['Instrument','Qty.', 'Avg. cost', 'LTP', 'P&L/%', 'Max Value', 'Final expected price','HOLD/SELL']
+            st.dataframe(processed_portfolio[selected_columns])
+
+            # Generate and display graphs
+            st.subheader("Graphs")
+            col1, col2 = st.columns(2)
+
+            def generate_market_cap_chart(df):
+                df['Market Cap Category'] = pd.cut(
+                    df['Market Capitalization'],
+                    bins=[0, 5000, 20000, float('inf')],
+                    labels=['Small-Cap', 'Mid-Cap', 'Large-Cap']
+                    )
+                market_cap_counts = df['Market Cap Category'].value_counts().reset_index()
+                market_cap_counts.columns = ['Market Cap Category', 'Count']
+                fig = px.pie(
+                    market_cap_counts, 
+                    names='Market Cap Category', 
+                    values='Count', 
+                    title='Market Capitalization Distribution'
+                    )
+                return fig
+
+            def generate_industry_chart(df):
+                industry_counts = df['Industry'].value_counts().reset_index()
+                industry_counts.columns = ['Industry', 'Count']
+                fig = px.bar(
+                    industry_counts, 
+                    x='Industry', 
+                    y='Count', 
+                    title='Industry Distribution', 
+                    text='Count'
+                 )
+                fig.update_traces(textposition='outside')
+                return fig
+
+            with col1:
+                market_cap_chart = generate_market_cap_chart(processed_portfolio)
+                st.plotly_chart(market_cap_chart)
+
+            with col2:
+                industry_chart = generate_industry_chart(processed_portfolio)
+                st.plotly_chart(industry_chart)
+
+            # Download processed data
+            st.subheader("Download Processed Portfolio")
+            csv_data = processed_portfolio.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Processed Portfolio as CSV",
+                data=csv_data,
+                file_name="processed_portfolio.csv",
+                mime="text/csv"
             )
-            return merged_df
-
-        processed_portfolio = process_portfolio_data(portfolio_df, all_stocks_df)
-
-        # Display processed portfolio
-        st.subheader("Processed Portfolio Data")
-        selected_columns = ['Instrument','Qty.', 'Avg. cost', 'LTP', 'P&L/%', 'Max Value', 'Final expected price','HOLD/SELL']
-        st.dataframe(processed_portfolio[selected_columns])
-
-        # Generate and display graphs
-        st.subheader("Graphs")
-        col1, col2 = st.columns(2)
-
-        def generate_market_cap_chart(df):
-            df['Market Cap Category'] = pd.cut(
-                df['Market Capitalization'],
-                bins=[0, 5000, 20000, float('inf')],
-                labels=['Small-Cap', 'Mid-Cap', 'Large-Cap']
-            )
-            market_cap_counts = df['Market Cap Category'].value_counts().reset_index()
-            market_cap_counts.columns = ['Market Cap Category', 'Count']
-            fig = px.pie(
-                market_cap_counts, 
-                names='Market Cap Category', 
-                values='Count', 
-                title='Market Capitalization Distribution'
-            )
-            return fig
-
-        def generate_industry_chart(df):
-            industry_counts = df['Industry'].value_counts().reset_index()
-            industry_counts.columns = ['Industry', 'Count']
-            fig = px.bar(
-                industry_counts, 
-                x='Industry', 
-                y='Count', 
-                title='Industry Distribution', 
-                text='Count'
-            )
-            fig.update_traces(textposition='outside')
-            return fig
-
-        with col1:
-            market_cap_chart = generate_market_cap_chart(processed_portfolio)
-            st.plotly_chart(market_cap_chart)
-
-        with col2:
-            industry_chart = generate_industry_chart(processed_portfolio)
-            st.plotly_chart(industry_chart)
-
-        # Download processed data
-        st.subheader("Download Processed Portfolio")
-        csv_data = processed_portfolio.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download Processed Portfolio as CSV",
-            data=csv_data,
-            file_name="processed_portfolio.csv",
-            mime="text/csv"
-        )
-    else:
-        st.info("Please upload both Portfolio and All Stocks CSV files.")
+        else:
+            st.info("Please upload both Portfolio and All Stocks CSV files.")
 
 
