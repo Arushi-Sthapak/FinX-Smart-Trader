@@ -13,6 +13,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 import tempfile
+from kiteconnect import KiteConnect
 from dotenv import load_dotenv
 
 # Utility Functions
@@ -640,10 +641,30 @@ with tabs[1]:
     
     # Retrieve all stocks file from Tab 1
     tab1_all_stocks_file = get_stored_all_stocks_file()
+
+    # Zerodha API Key Input
+    st.subheader("Zerodha Portfolio Import")
+    api_key = st.text_input("Enter Zerodha API Key")
+    access_token = st.text_input("Enter Access Token", type="password")
+
+    def fetch_zerodha_holdings(api_key, access_token):
+        kite = KiteConnect(api_key=api_key)
+        kite.set_access_token(access_token)
+        holdings = kite.holdings()
+        df = pd.DataFrame(holdings)
+        df = df[['tradingsymbol', 'quantity', 'average_price', 'last_price']]
+        df.rename(columns={
+            'tradingsymbol': 'Instrument',
+            'quantity': 'Qty.',
+            'average_price': 'Avg. cost',
+            'last_price': 'LTP'
+        }, inplace=True)
+        return df
     
     if not tab1_all_stocks_file:
         st.error("No All Stocks file found from Tab 1. Please upload a file in Tab 1 first.")
         st.stop()
+
     # Portfolio file upload
     uploaded_portfolio = st.file_uploader("Upload Portfolio CSV", type="csv")
     portfolio_name = st.text_input("Enter Portfolio Name")
@@ -654,6 +675,20 @@ with tabs[1]:
         else:
             st.warning("Please provide both a file and a name.")   
     
+    if st.button("Fetch Portfolio from Zerodha"):
+        if api_key and access_token:
+            try:
+                portfolio_df = fetch_zerodha_holdings(api_key, access_token)
+                conn = sqlite3.connect(DB_PATH)
+                portfolio_df.to_sql("zerodha_portfolio", conn, if_exists="replace", index=False)
+                conn.close()
+                st.success("Portfolio fetched and stored successfully!")
+                st.dataframe(portfolio_df)
+            except Exception as e:
+                st.error(f"Error fetching portfolio: {e}")
+        else:
+            st.warning("Please enter both API Key and Access Token.")
+
     # List stored portfolios
     st.subheader("Stored Portfolios")
     with st.expander("📁 View Stored Portfolios", expanded=False):  # Collapsible section
