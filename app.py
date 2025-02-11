@@ -665,16 +665,6 @@ with tabs[1]:
         st.error("No All Stocks file found from Tab 1. Please upload a file in Tab 1 first.")
         st.stop()
 
-    # Portfolio file upload
-    uploaded_portfolio = st.file_uploader("Upload Portfolio CSV", type="csv")
-    portfolio_name = st.text_input("Enter Portfolio Name")
-    if st.button("Save Portfolio"):
-        if uploaded_portfolio and portfolio_name:
-            save_portfolio_file(portfolio_name, uploaded_portfolio)
-            st.success(f"Portfolio '{portfolio_name}' saved successfully!")
-        else:
-            st.warning("Please provide both a file and a name.")   
-    
     if st.button("Fetch Portfolio from Zerodha"):
         if api_key and access_token:
             try:
@@ -689,6 +679,16 @@ with tabs[1]:
         else:
             st.warning("Please enter both API Key and Access Token.")
 
+    # Portfolio file upload
+    uploaded_portfolio = st.file_uploader("Upload Portfolio CSV", type="csv")
+    portfolio_name = st.text_input("Enter Portfolio Name")
+    if st.button("Save Portfolio"):
+        if uploaded_portfolio and portfolio_name:
+            save_portfolio_file(portfolio_name, uploaded_portfolio)
+            st.success(f"Portfolio '{portfolio_name}' saved successfully!")
+        else:
+            st.warning("Please provide both a file and a name.")   
+    
     # List stored portfolios
     st.subheader("Stored Portfolios")
     with st.expander("📁 View Stored Portfolios", expanded=False):  # Collapsible section
