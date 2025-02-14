@@ -752,7 +752,7 @@ with tabs[1]:
                 merged_df = calculate_pb_method_share_price(merged_df)
                 merged_df = calculate_gain_percentage(merged_df)
                 merged_df['HOLD/SELL'] = merged_df.apply(
-                    lambda row: 'HOLD' if row['Final expected price'] > row['Max Value'] else 'SELL', axis=1
+                    lambda row: f"Hold and Sell at {row['Final expected price']}" if row['Final expected price'] > row['Max Value'] else 'SELL', axis=1
                 )
                 return merged_df
             
