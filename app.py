@@ -550,8 +550,9 @@ with tabs[0]:
             # Split Data into Non-SME and SME
             non_sme = processed_data[processed_data['Is SME'] == 0].sort_values(by='Gain%', ascending=False)
             sme = processed_data[processed_data['Is SME'] == 1].sort_values(by='Gain%', ascending=False)
-            non_sme_screened =  processed_data[(processed_data['Is SME'] == 0) & (processed_data['Sales']>50) & (processed_data['Operating profit']>10)].sort_values(by='Gain%', ascending=False)
-            sme_screened =  processed_data[(processed_data['Is SME'] == 1) & (processed_data['Sales']>5) & (processed_data['Operating profit']>1)].sort_values(by='Gain%', ascending=False)
+            #'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple'
+            non_sme_screened =  processed_data[(processed_data['Is SME'] == 0) & (processed_data['Sales']>50) & (processed_data['Operating profit']>10) & (processed_data['Value as per EV/EBITDA Method']>0) & (processed_data['Value as per Revenue Method']>0) & (processed_data['Value as per PE Multiple']>0) & (processed_data['Value as per PB Multiple']>0) ].sort_values(by='Gain%', ascending=False)
+            sme_screened =  processed_data[(processed_data['Is SME'] == 1) & (processed_data['Sales']>5) & (processed_data['Operating profit']>1) & (processed_data['Value as per EV/EBITDA Method']>0) & (processed_data['Value as per Revenue Method']>0) & (processed_data['Value as per PE Multiple']>0) & (processed_data['Value as per PB Multiple']>0) ].sort_values(by='Gain%', ascending=False)
             # Tab Layout
             tab1, tab2, tab3, tab4 = st.tabs(["Non-SME Companies", "SME Companies","Non-SME Screened Companies","SME Screened Companies"])
 
@@ -565,19 +566,19 @@ with tabs[0]:
             with tab2:
                 st.subheader("SME Companies")
                 grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
-                AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_table")
+                AgGrid(sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_table")
                 #st.dataframe(sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']],use_container_width=True, hide_index=True)
         
             with tab3:
                 st.subheader("Non-SME Screened Companies")
                 grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
-                AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="non_sme_s_table")
+                AgGrid(non_sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="non_sme_s_table")
                 #st.dataframe(non_sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], use_container_width=True, hide_index=True)
 
             with tab4:
                 st.subheader("SME Screened Companies")
                 grid_options = configure_aggrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']])
-                AgGrid(non_sme[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_s_table")
+                AgGrid(sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], gridOptions=grid_options, fit_columns_on_grid_load=True, height=30, key="sme_s_table")
                 #st.dataframe(sme_screened[['Name', 'Market Capitalisation', 'Current Price', 'Final expected price', 'Gain%', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']], use_container_width=True, hide_index=True)
         
     # Provide a download button for the last stored file
@@ -759,8 +760,9 @@ with tabs[1]:
             processed_portfolio = process_portfolio_data(portfolio_df, all_stocks_df)
 
             # Display processed portfolio
+            #'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple'
             st.subheader("Processed Portfolio Data")
-            selected_columns = ['Instrument','Qty.', 'Avg. cost', 'LTP', 'P&L/%', 'Max Value', 'Final expected price','HOLD/SELL']
+            selected_columns = ['Instrument','Qty.', 'Avg. cost', 'LTP', 'P&L/%', 'Max Value', 'Final expected price','HOLD/SELL', 'Value as per EV/EBITDA Method', 'Value as per Revenue Method', 'Value as per PE Multiple', 'Value as per PB Multiple', 'PB_elements_is_1']
             st.dataframe(processed_portfolio[selected_columns])
 
             # Generate and display graphs
