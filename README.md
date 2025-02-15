@@ -1,7 +1,5 @@
 # FinX - Your Smart Trader
 
-## 📌 AI-Powered Financial & Stock Analysis App – Case Study
-
 🚀 Automating Portfolio Analysis & Stock Price Prediction with AI
 
 ## 1️⃣ Problem Statement:
