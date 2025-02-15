@@ -21,7 +21,7 @@ A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
 ✅ Visualizes key financial metrics in an interactive dashboard
 
 
-### 🔗 Live Demo: [Stock Price Valuation Calculator](https://stock-price-valuation-calculator-ekt6bqpvbmtcj3xenfzfvu.streamlit.app/)
+**🔗 Live Demo: [Stock Price Valuation Calculator](https://stock-price-valuation-calculator-ekt6bqpvbmtcj3xenfzfvu.streamlit.app/)**
 
 
 ## 3️⃣ Tech Stack Used:
