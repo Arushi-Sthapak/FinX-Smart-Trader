@@ -20,7 +20,9 @@ A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
 ✅ Fetches real-time stock market data from screener using web scraping
 ✅ Visualizes key financial metrics in an interactive dashboard
 
-### 🔗 Live Demo: Stock Price Valuation Calculator
+
+### 🔗 Live Demo: [Stock Price Valuation Calculator](https://stock-price-valuation-calculator-ekt6bqpvbmtcj3xenfzfvu.streamlit.app/)
+
 
 ## 3️⃣ Tech Stack Used:
 🟢 Python – Core development & ML model training
