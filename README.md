@@ -2,32 +2,33 @@
 
 ## 📌 AI-Powered Financial & Stock Analysis App – Case Study
 
-### 🚀 Automating Portfolio Analysis & Stock Price Prediction with AI
+🚀 Automating Portfolio Analysis & Stock Price Prediction with AI
 
-1️⃣ Problem Statement:
+## 1️⃣ Problem Statement:
+
 A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
 ✅ Analyze stock portfolios and calculate financial metrics 📊
 ✅ Predict stock prices using AI & historical trends 📈
 ✅ Automate financial decision-making with real-time data
 ✅ Reduce manual effort & improve accuracy for investment strategies
 
-2️⃣ My Solution:
+## 2️⃣ My Solution:
+
 💡 Built an AI-powered Portfolio & Stock Analysis App using Python & Streamlit that:
 ✅ Analyzes a stock portfolio and suggests optimization strategies
-✅ Predicts future stock prices using ML models (LSTM, ARIMA, etc.)
-✅ Fetches real-time stock market data from financial APIs
+✅ Predicts future stock prices using customized formulas
+✅ Fetches real-time stock market data from screener using web scraping
 ✅ Visualizes key financial metrics in an interactive dashboard
 
-🔗 Live Demo: Stock Price Valuation Calculator
+### 🔗 Live Demo: Stock Price Valuation Calculator
 
-3️⃣ Tech Stack Used:
+## 3️⃣ Tech Stack Used:
 🟢 Python – Core development & ML model training
 🟢 Streamlit – Interactive dashboard for users
-🟢 Scikit-learn & TensorFlow – AI-based stock price prediction
 🟢 Pandas & NumPy – Portfolio data processing
-🟢 Financial APIs (Yahoo Finance, Alpha Vantage) – Real-time stock data
+🟢 Web Scraping (Selenium) – Real-time stock data
 
-4️⃣ Key Features & Results:
+## 4️⃣ Key Features & Results:
 ✅ Portfolio Analysis – AI-based insights on stock allocation
 ✅ Stock Price Prediction – Predict future stock trends using ML
 ✅ Real-Time Market Data – Automated financial updates
