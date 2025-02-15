@@ -16,9 +16,13 @@ A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
 ## 2️⃣ My Solution:
 
 💡 Built an AI-powered Portfolio & Stock Analysis App using Python & Streamlit that:
+
 ✅ Analyzes a stock portfolio and suggests optimization strategies
+
 ✅ Predicts future stock prices using customized formulas
+
 ✅ Fetches real-time stock market data from screener using web scraping
+
 ✅ Visualizes key financial metrics in an interactive dashboard
 
 
@@ -26,9 +30,13 @@ A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
 
 
 ## 3️⃣ Tech Stack Used:
+
 🟢 Python – Core development & ML model training
+
 🟢 Streamlit – Interactive dashboard for users
+
 🟢 Pandas & NumPy – Portfolio data processing
+
 🟢 Web Scraping (Selenium) – Real-time stock data
 
 ## 4️⃣ Key Features & Results:
