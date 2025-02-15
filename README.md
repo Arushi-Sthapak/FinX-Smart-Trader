@@ -40,10 +40,15 @@ A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
 🟢 Web Scraping (Selenium) – Real-time stock data
 
 ## 4️⃣ Key Features & Results:
+
 ✅ Portfolio Analysis – AI-based insights on stock allocation
+
 ✅ Stock Price Prediction – Predict future stock trends using ML
+
 ✅ Real-Time Market Data – Automated financial updates
+
 ✅ 70% Faster Analysis – Reduced time spent on manual calculations
+
 ✅ User-Friendly Dashboard – Accessible for non-technical users
 
 
