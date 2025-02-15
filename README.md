@@ -6,8 +6,11 @@
 
 A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
 ✅ Analyze stock portfolios and calculate financial metrics 📊
+
 ✅ Predict stock prices using AI & historical trends 📈
+
 ✅ Automate financial decision-making with real-time data
+
 ✅ Reduce manual effort & improve accuracy for investment strategies
 
 ## 2️⃣ My Solution:
