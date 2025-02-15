@@ -5,6 +5,7 @@
 ## 1️⃣ Problem Statement:
 
 A Chartered Accountant (CA) at Tech Mahindra needed a powerful tool to:
+
 ✅ Analyze stock portfolios and calculate financial metrics 📊
 
 ✅ Predict stock prices using AI & historical trends 📈
